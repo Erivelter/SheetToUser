@@ -1,14 +1,19 @@
-from flask import Flask, jsonify, request, send_from_directory, render_template
+from flask import Flask, jsonify, request, send_from_directory
 import os
 import pandas as pd
 import json
+from .database import db
+from .model.user import User
 
-from model import  user
 Diretorio="C:\\Users\\erive\\OneDrive\\Documentos\\programação\\Study\\save_flask\\output"
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////user.db'
 
-db.create_all()
+app = Flask(__name__)
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(BASE_DIR, "user.db")}'
+db.init_app(app)
+
+
 csv_file=""
 
 with app.app_context():
@@ -41,7 +46,18 @@ def post_arquivo():
     nome_do_arquivo = arquivo.filename
     arquivo.save(os.path.join(Diretorio, nome_do_arquivo ))
     csv_file = nome_do_arquivo
+    cadastrar_usuarios(nome_do_arquivo)
     return '', 201
+def cadastrar_usuarios(nome_do_arquivo):
+    try:
+        df = pd.read_csv(os.path.join(Diretorio, nome_do_arquivo))
+        for _, row in df.iterrows():
+            new_user = User(id=row['id'], name=row['name'], password=row['password'])
+            db.session.add(new_user)
+        db.session.commit()
+    except Exception as e:
+        print(f"Erro ao cadastrar usuários: {e}")
+        db.session.rollback()
 
 
 @app.route("/get_csv", methods=["GET"])
@@ -60,18 +76,21 @@ def get_user():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/user", methods=["POST"])
-def create_user(json_data):
-    data = json.loads(json_data)
-    id= data.get('id')
-    name = data.get('name')
-    password = data.get('password')
+# @app.route("/user", methods=["POST"])
+# def create_user():
+#     json_data = request.get_json()  # Captura o JSON do corpo da requisição
+#     if not json_data:
+#         return jsonify({"error": "Dados não fornecidos"}), 400
 
-    new_user = user(id=id, name=name, password=password)
-    db.session.add(new_user)
-    db.session.commit()
+#     id = json_data.get('id')
+#     name = json_data.get('name')
+#     password = json_data.get('password')
 
-    return '', 201
+#     new_user = User(id=id, name=name, password=password)
+#     db.session.add(new_user)
+#     db.session.commit()
+
+#     return '', 201
     
 
 

@@ -1,8 +1,6 @@
-from flask_sqlalchemy import SQLAlchemy
-from ..app import db
-db = SQLAlchemy(app)
-class user(db.Model):
+from ..database import db  # Agora importa db do novo módulo
+
+class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     password = db.Column(db.String)
-    
